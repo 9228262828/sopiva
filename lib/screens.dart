@@ -30,58 +30,164 @@ class _SplashScreenState extends State<SplashScreen> {
       await Future.delayed(const Duration(milliseconds: 40));
     }
 
-    await Future.delayed(const Duration(milliseconds: 450));
+    await Future.delayed(const Duration(milliseconds: 420));
 
     if (!mounted) return;
 
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (_) => HomeScreen(store: widget.store),
+        builder: (_) => WorkspaceShell(store: widget.store),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SopivaLogo(size: 102),
-            SizedBox(height: 22),
-            Text(
-              'SOPIVA',
-              style: TextStyle(
-                fontSize: 34,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 4,
-              ),
+    final dark = Theme.of(context).brightness == Brightness.dark;
+
+    return Scaffold(
+      body: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: dark ? const Color(0xFF11151C) : sopivaPaper,
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(28),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Spacer(),
+                const SopivaMark(size: 92),
+                const SizedBox(height: 28),
+                const Text(
+                  'SOPIVA',
+                  style: TextStyle(
+                    fontSize: 40,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 5,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'PROCEDURE WORKSPACE',
+                  style: TextStyle(
+                    color: dark ? Colors.white60 : sopivaSlate,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.8,
+                  ),
+                ),
+                const SizedBox(height: 26),
+                Container(
+                  width: 72,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: sopivaCoral,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  'Structure the process.\nRun it cleanly.',
+                  style: TextStyle(
+                    color: dark ? Colors.white70 : sopivaInk,
+                    fontSize: 18,
+                    height: 1.35,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
             ),
-            SizedBox(height: 6),
-            Text(
-              'PROCEDURE CHECKLIST MANAGER',
-              style: TextStyle(
-                color: sopivaTeal,
-                fontSize: 9,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1.1,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-class HomeScreen extends StatelessWidget {
+class WorkspaceShell extends StatefulWidget {
   final SopivaStore store;
 
-  const HomeScreen({
+  const WorkspaceShell({
     super.key,
     required this.store,
+  });
+
+  @override
+  State<WorkspaceShell> createState() => _WorkspaceShellState();
+}
+
+class _WorkspaceShellState extends State<WorkspaceShell> {
+  int index = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final pages = [
+      OverviewPage(
+        store: widget.store,
+        openProcedures: () => setState(() => index = 1),
+        openHistory: () => setState(() => index = 2),
+        openInsights: () => setState(() => index = 3),
+      ),
+      ProceduresPage(store: widget.store),
+      RunHistoryPage(store: widget.store),
+      InsightsPage(store: widget.store),
+    ];
+
+    return Scaffold(
+      body: SafeArea(
+        bottom: false,
+        child: IndexedStack(
+          index: index,
+          children: pages,
+        ),
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: index,
+        onDestinationSelected: (value) {
+          setState(() => index = value);
+        },
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.dashboard_outlined),
+            selectedIcon: Icon(Icons.dashboard_rounded),
+            label: 'Overview',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.account_tree_outlined),
+            selectedIcon: Icon(Icons.account_tree_rounded),
+            label: 'Procedures',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.history_outlined),
+            selectedIcon: Icon(Icons.history_rounded),
+            label: 'History',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.insights_outlined),
+            selectedIcon: Icon(Icons.insights_rounded),
+            label: 'Insights',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class OverviewPage extends StatelessWidget {
+  final SopivaStore store;
+  final VoidCallback openProcedures;
+  final VoidCallback openHistory;
+  final VoidCallback openInsights;
+
+  const OverviewPage({
+    super.key,
+    required this.store,
+    required this.openProcedures,
+    required this.openHistory,
+    required this.openInsights,
   });
 
   @override
@@ -89,373 +195,269 @@ class HomeScreen extends StatelessWidget {
     return AnimatedBuilder(
       animation: store,
       builder: (context, _) {
-        final favorites =
-            store.procedures.where((e) => e.favorite).take(3).toList();
-
-        final mostUsed = [...store.procedures]
+        final recent = [...store.runs].take(3).toList();
+        final top = [...store.procedures]
           ..sort(
             (a, b) => store
                 .usageCount(b.id)
                 .compareTo(store.usageCount(a.id)),
           );
 
-        return Scaffold(
-          floatingActionButton: FloatingActionButton.extended(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => ProcedureEditorScreen(store: store),
-              ),
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 110),
+          children: [
+            _TopBar(store: store),
+            const SizedBox(height: 22),
+            _CommandPanel(
+              store: store,
+              openProcedures: openProcedures,
             ),
-            icon: const Icon(Icons.add_rounded),
-            label: const Text('NEW PROCEDURE'),
-          ),
-          body: SafeArea(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(18, 20, 18, 100),
+            const SizedBox(height: 22),
+            const SectionTitle(
+              kicker: 'Workspace pulse',
+              title: 'At a glance',
+            ),
+            const SizedBox(height: 12),
+            GridView(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate:
+                  const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                mainAxisSpacing: 10,
+                crossAxisSpacing: 10,
+                childAspectRatio: 2.15,
+              ),
               children: [
-                Row(
-                  children: [
-                    const SopivaLogo(size: 54),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'SOPIVA',
-                            style: TextStyle(
-                              fontSize: 21,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 3,
-                            ),
-                          ),
-                          Text(
-                            'WORKFLOW CONTROL',
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 1.1,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => SettingsScreen(store: store),
-                        ),
-                      ),
-                      icon: const Icon(Icons.settings_outlined),
-                    ),
-                  ],
+                MetricStrip(
+                  value: '${store.procedures.length}',
+                  label: 'Procedures',
+                  icon: Icons.account_tree_outlined,
+                  color: sopivaIndigo,
                 ),
-                const SizedBox(height: 28),
-                const Text(
-                  'Run every process\nwith confidence.',
-                  style: TextStyle(
-                    fontSize: 31,
-                    height: 1.08,
-                    fontWeight: FontWeight.w900,
+                MetricStrip(
+                  value: '${store.totalRuns}',
+                  label: 'Runs',
+                  icon: Icons.play_circle_outline_rounded,
+                  color: sopivaCoral,
+                ),
+                MetricStrip(
+                  value:
+                      '${(store.averageCompletionRate * 100).round()}%',
+                  label: 'Completion',
+                  icon: Icons.task_alt_rounded,
+                  color: sopivaMint,
+                ),
+                MetricStrip(
+                  value: formatDuration(
+                    store.averageDurationSeconds,
                   ),
+                  label: 'Avg. run',
+                  icon: Icons.timer_outlined,
+                  color: sopivaGold,
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Build repeatable procedures, run checklists, and review execution history.',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: MetricCard(
-                        value: '${store.procedures.length}',
-                        label: 'PROCEDURES',
-                        icon: Icons.rule_rounded,
-                        color: sopivaTeal,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: MetricCard(
-                        value: '${store.totalRuns}',
-                        label: 'TOTAL RUNS',
-                        icon: Icons.play_circle_outline_rounded,
-                        color: sopivaBlue,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: MetricCard(
-                        value:
-                            '${(store.averageCompletionRate * 100).round()}%',
-                        label: 'AVG COMPLETE',
-                        icon: Icons.task_alt_rounded,
-                        color: sopivaGreen,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: MetricCard(
-                        value: formatDuration(
-                          store.averageDurationSeconds,
-                        ),
-                        label: 'AVG TIME',
-                        icon: Icons.timer_outlined,
-                        color: sopivaAmber,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                _QuickMenu(store: store),
-                const SizedBox(height: 26),
-                _SectionHeader(
-                  title: 'Most used',
-                  actionLabel: 'VIEW ALL',
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ProceduresScreen(store: store),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                if (mostUsed.isEmpty)
-                  const _EmptyCard(
-                    icon: Icons.rule_folder_outlined,
-                    title: 'No procedures yet',
-                    text:
-                        'Create your first procedure and add checklist steps.',
-                  )
-                else
-                  ...mostUsed.take(4).map(
-                        (item) => Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: ProcedureCard(
-                            item: item,
-                            store: store,
-                          ),
-                        ),
-                      ),
-                if (favorites.isNotEmpty) ...[
-                  const SizedBox(height: 18),
-                  const _SectionHeader(title: 'Favorites'),
-                  const SizedBox(height: 10),
-                  ...favorites.map(
-                    (item) => Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: ProcedureCard(
-                        item: item,
-                        store: store,
-                      ),
-                    ),
-                  ),
-                ],
               ],
             ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _QuickMenu extends StatelessWidget {
-  final SopivaStore store;
-
-  const _QuickMenu({
-    required this.store,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final items = <Map<String, dynamic>>[
-      {
-        'title': 'Procedures',
-        'icon': Icons.rule_folder_outlined,
-        'open': () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => ProceduresScreen(store: store),
-              ),
+            const SizedBox(height: 28),
+            SectionTitle(
+              kicker: 'Quick launch',
+              title: 'Run a procedure',
+              action: 'ALL',
+              onAction: openProcedures,
             ),
-      },
-      {
-        'title': 'Run History',
-        'icon': Icons.history_rounded,
-        'open': () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => RunHistoryScreen(store: store),
-              ),
-            ),
-      },
-      {
-        'title': 'Statistics',
-        'icon': Icons.bar_chart_rounded,
-        'open': () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => StatisticsScreen(store: store),
-              ),
-            ),
-      },
-      {
-        'title': 'Favorites',
-        'icon': Icons.star_outline_rounded,
-        'open': () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => ProceduresScreen(
-                  store: store,
-                  favoritesOnly: true,
+            const SizedBox(height: 12),
+            if (top.isEmpty)
+              _BlankSlate(
+                icon: Icons.account_tree_outlined,
+                title: 'No procedures yet',
+                message:
+                    'Create your first workflow and define the steps once.',
+                action: 'CREATE PROCEDURE',
+                onAction: () => _openProcedureEditor(context, store),
+              )
+            else
+              SizedBox(
+                height: 154,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: top.take(5).length,
+                  separatorBuilder: (_, __) =>
+                      const SizedBox(width: 10),
+                  itemBuilder: (context, index) {
+                    final item = top[index];
+                    return _LaunchTile(
+                      item: item,
+                      store: store,
+                    );
+                  },
                 ),
               ),
+            const SizedBox(height: 28),
+            SectionTitle(
+              kicker: 'Execution log',
+              title: 'Recent activity',
+              action: 'HISTORY',
+              onAction: openHistory,
             ),
-      },
-    ];
-
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: items.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: 10,
-        crossAxisSpacing: 10,
-        childAspectRatio: 1.75,
-      ),
-      itemBuilder: (context, index) {
-        final item = items[index];
-
-        return Card(
-          elevation: 0,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(22),
-            onTap: item['open'] as VoidCallback,
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                children: [
-                  Icon(
-                    item['icon'] as IconData,
-                    color: sopivaTeal,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      item['title'] as String,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                ],
+            const SizedBox(height: 12),
+            if (recent.isEmpty)
+              const _BlankSlate(
+                icon: Icons.history_toggle_off_rounded,
+                title: 'No completed runs',
+                message:
+                    'Run a procedure and its result will appear here.',
+              )
+            else
+              ...recent.map(
+                (run) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _RecentRunRow(run: run),
+                ),
               ),
+            const SizedBox(height: 20),
+            TextButton.icon(
+              onPressed: openInsights,
+              icon: const Icon(Icons.insights_rounded),
+              label: const Text('VIEW PERFORMANCE INSIGHTS'),
             ),
-          ),
+          ],
         );
       },
     );
   }
 }
 
-class _SectionHeader extends StatelessWidget {
-  final String title;
-  final String? actionLabel;
-  final VoidCallback? onTap;
+class _TopBar extends StatelessWidget {
+  final SopivaStore store;
 
-  const _SectionHeader({
-    required this.title,
-    this.actionLabel,
-    this.onTap,
+  const _TopBar({
+    required this.store,
   });
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(
-          child: Text(
-            title,
-            style: const TextStyle(
-              fontSize: 19,
-              fontWeight: FontWeight.w900,
-            ),
+        const SopivaMark(size: 48, compact: true),
+        const SizedBox(width: 12),
+        const Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'SOPIVA',
+                style: TextStyle(
+                  fontSize: 19,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 2.8,
+                ),
+              ),
+              Text(
+                'PROCESS WORKSPACE',
+                style: TextStyle(
+                  fontSize: 9,
+                  color: sopivaSlate,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.1,
+                ),
+              ),
+            ],
           ),
         ),
-        if (actionLabel != null)
-          TextButton(
-            onPressed: onTap,
-            child: Text(actionLabel!),
+        IconButton.filledTonal(
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => SettingsScreen(store: store),
+            ),
           ),
+          icon: const Icon(Icons.tune_rounded),
+        ),
       ],
     );
   }
 }
 
-class _EmptyCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String text;
+class _CommandPanel extends StatelessWidget {
+  final SopivaStore store;
+  final VoidCallback openProcedures;
 
-  const _EmptyCard({
-    required this.icon,
-    required this.title,
-    required this.text,
+  const _CommandPanel({
+    required this.store,
+    required this.openProcedures,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      child: Padding(
-        padding: const EdgeInsets.all(22),
-        child: Column(
-          children: [
-            Icon(
-              icon,
-              color: sopivaTeal,
-              size: 38,
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: sopivaInk,
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Pill(
+            text: 'PROCESS CONTROL',
+            color: sopivaCoral,
+            icon: Icons.bolt_rounded,
+          ),
+          const SizedBox(height: 18),
+          const Text(
+            'One process.\nOne clean run.',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 30,
+              height: 1.05,
+              fontWeight: FontWeight.w900,
             ),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w900,
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            'Build reusable operating procedures and execute them step by step.',
+            style: TextStyle(
+              color: Colors.white60,
+              height: 1.45,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: sopivaCoral,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () =>
+                      _openProcedureEditor(context, store),
+                  icon: const Icon(Icons.add_rounded),
+                  label: const Text('NEW PROCEDURE'),
+                ),
               ),
-            ),
-            const SizedBox(height: 5),
-            Text(
-              text,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              const SizedBox(width: 10),
+              IconButton.filled(
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.white12,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: openProcedures,
+                icon: const Icon(Icons.arrow_forward_rounded),
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
+        ],
       ),
     );
   }
 }
 
-class ProcedureCard extends StatelessWidget {
+class _LaunchTile extends StatelessWidget {
   final ProcedureItem item;
   final SopivaStore store;
 
-  const ProcedureCard({
-    super.key,
+  const _LaunchTile({
     required this.item,
     required this.store,
   });
@@ -463,85 +465,46 @@ class ProcedureCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = categoryColor(item.category);
-    final used = store.usageCount(item.id);
 
-    return Card(
-      elevation: 0,
+    return SizedBox(
+      width: 178,
       child: InkWell(
-        borderRadius: BorderRadius.circular(22),
-        onTap: () => Navigator.push(
+        borderRadius: BorderRadius.circular(24),
+        onTap: () => _openProcedureDetail(
           context,
-          MaterialPageRoute(
-            builder: (_) => ProcedureDetailScreen(
-              store: store,
-              procedureId: item.id,
+          store,
+          item.id,
+        ),
+        child: Ink(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: color.withOpacity(.16),
             ),
           ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(15),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 54,
-                height: 54,
-                decoration: BoxDecoration(
-                  color: color.withOpacity(.09),
-                  borderRadius: BorderRadius.circular(17),
-                ),
-                child: Icon(
-                  categoryIcon(item.category),
-                  color: color,
+              Icon(categoryIcon(item.category), color: color),
+              const Spacer(),
+              Text(
+                item.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
-              const SizedBox(width: 13),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            item.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                        ),
-                        if (item.favorite)
-                          const Icon(
-                            Icons.star_rounded,
-                            color: sopivaAmber,
-                            size: 18,
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      '${procedureCategoryLabel(item.category)} • ${item.steps.length} steps',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 7),
-                    Text(
-                      used == 0
-                          ? 'Not run yet'
-                          : '$used completed ${used == 1 ? 'run' : 'runs'}',
-                      style: TextStyle(
-                        color: color,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
+              const SizedBox(height: 5),
+              Text(
+                '${item.steps.length} steps • ${store.usageCount(item.id)} runs',
+                style: const TextStyle(
+                  fontSize: 10,
+                  color: sopivaSlate,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ],
@@ -552,21 +515,141 @@ class ProcedureCard extends StatelessWidget {
   }
 }
 
-class ProceduresScreen extends StatefulWidget {
-  final SopivaStore store;
-  final bool favoritesOnly;
+class _RecentRunRow extends StatelessWidget {
+  final ProcedureRun run;
 
-  const ProceduresScreen({
-    super.key,
-    required this.store,
-    this.favoritesOnly = false,
+  const _RecentRunRow({
+    required this.run,
   });
 
   @override
-  State<ProceduresScreen> createState() => _ProceduresScreenState();
+  Widget build(BuildContext context) {
+    final color = categoryColor(run.category);
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 9,
+            height: 44,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(999),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  run.procedureTitle,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '${shortDate(run.finishedAt)} • ${formatDuration(run.durationSeconds)}',
+                  style: const TextStyle(
+                    color: sopivaSlate,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Pill(
+            text: '${(run.completionRate * 100).round()}%',
+            color: run.skippedCount == 0
+                ? sopivaMint
+                : sopivaGold,
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-class _ProceduresScreenState extends State<ProceduresScreen> {
+class _BlankSlate extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String message;
+  final String? action;
+  final VoidCallback? onAction;
+
+  const _BlankSlate({
+    required this.icon,
+    required this.title,
+    required this.message,
+    this.action,
+    this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: Theme.of(context).dividerColor.withOpacity(.12),
+        ),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, size: 38, color: sopivaSlate),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: sopivaSlate,
+              height: 1.4,
+            ),
+          ),
+          if (action != null) ...[
+            const SizedBox(height: 14),
+            TextButton(
+              onPressed: onAction,
+              child: Text(action!),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+
+class ProceduresPage extends StatefulWidget {
+  final SopivaStore store;
+
+  const ProceduresPage({
+    super.key,
+    required this.store,
+  });
+
+  @override
+  State<ProceduresPage> createState() => _ProceduresPageState();
+}
+
+class _ProceduresPageState extends State<ProceduresPage> {
   String query = '';
   ProcedureCategory? category;
 
@@ -577,129 +660,277 @@ class _ProceduresScreenState extends State<ProceduresScreen> {
       builder: (context, _) {
         final items = widget.store.procedures.where((item) {
           final q = query.trim().toLowerCase();
-
-          final matchesQuery = q.isEmpty ||
+          final queryOk = q.isEmpty ||
               item.title.toLowerCase().contains(q) ||
               item.description.toLowerCase().contains(q) ||
               procedureCategoryLabel(item.category)
                   .toLowerCase()
                   .contains(q);
 
-          final matchesCategory =
+          final categoryOk =
               category == null || item.category == category;
 
-          final matchesFavorite =
-              !widget.favoritesOnly || item.favorite;
-
-          return matchesQuery &&
-              matchesCategory &&
-              matchesFavorite;
+          return queryOk && categoryOk;
         }).toList()
           ..sort((a, b) {
             if (a.favorite != b.favorite) {
               return a.favorite ? -1 : 1;
             }
+
             return a.title
                 .toLowerCase()
                 .compareTo(b.title.toLowerCase());
           });
 
-        return Scaffold(
-          appBar: AppBar(
-            title: Text(
-              widget.favoritesOnly
-                  ? 'FAVORITE PROCEDURES'
-                  : 'MY PROCEDURES',
-            ),
-          ),
-          floatingActionButton: FloatingActionButton(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => ProcedureEditorScreen(
-                  store: widget.store,
-                ),
+        return Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 10),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: SectionTitle(
+                      kicker: 'Process library',
+                      title: 'Procedures',
+                    ),
+                  ),
+                  FilledButton.icon(
+                    onPressed: () =>
+                        _openProcedureEditor(context, widget.store),
+                    icon: const Icon(Icons.add_rounded),
+                    label: const Text('NEW'),
+                  ),
+                ],
               ),
             ),
-            child: const Icon(Icons.add_rounded),
-          ),
-          body: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
-            children: [
-              TextField(
-                onChanged: (value) {
-                  setState(() => query = value);
-                },
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              child: TextField(
+                onChanged: (value) => setState(() => query = value),
                 decoration: const InputDecoration(
-                  hintText: 'Search procedures',
+                  hintText: 'Find a procedure',
                   prefixIcon: Icon(Icons.search_rounded),
                 ),
               ),
-              const SizedBox(height: 12),
-              SizedBox(
-                height: 42,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        label: const Text('All'),
-                        selected: category == null,
-                        onSelected: (_) {
-                          setState(() => category = null);
-                        },
-                      ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 43,
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                scrollDirection: Axis.horizontal,
+                children: [
+                  _FilterPill(
+                    label: 'All',
+                    selected: category == null,
+                    onTap: () => setState(() => category = null),
+                  ),
+                  for (final value in ProcedureCategory.values)
+                    _FilterPill(
+                      label: procedureCategoryLabel(value),
+                      selected: category == value,
+                      onTap: () => setState(() => category = value),
                     ),
-                    for (final value
-                        in ProcedureCategory.values)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: ChoiceChip(
-                          label: Text(
-                            procedureCategoryLabel(value),
-                          ),
-                          selected: category == value,
-                          onSelected: (_) {
-                            setState(() => category = value);
-                          },
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            Expanded(
+              child: items.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.all(18),
+                      child: _BlankSlate(
+                        icon: Icons.search_off_rounded,
+                        title: 'Nothing matches',
+                        message:
+                            'Try another search or create a new procedure.',
+                        action: 'CREATE PROCEDURE',
+                        onAction: () => _openProcedureEditor(
+                          context,
+                          widget.store,
                         ),
                       ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                '${items.length} procedures',
-                style: TextStyle(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurfaceVariant,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 10),
-              if (items.isEmpty)
-                const _EmptyCard(
-                  icon: Icons.search_off_rounded,
-                  title: 'No procedures found',
-                  text:
-                      'Try another filter or create a new procedure.',
-                )
-              else
-                ...items.map(
-                  (item) => Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: ProcedureCard(
-                      item: item,
-                      store: widget.store,
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(18, 8, 18, 110),
+                      itemCount: items.length,
+                      separatorBuilder: (_, __) =>
+                          const SizedBox(height: 10),
+                      itemBuilder: (context, index) {
+                        return _ProcedureRow(
+                          item: items[index],
+                          store: widget.store,
+                          index: index,
+                        );
+                      },
                     ),
-                  ),
-                ),
-            ],
-          ),
+            ),
+          ],
         );
       },
+    );
+  }
+}
+
+class _FilterPill extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _FilterPill({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+          decoration: BoxDecoration(
+            color: selected
+                ? sopivaInk
+                : Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: selected ? Colors.white : sopivaSlate,
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProcedureRow extends StatelessWidget {
+  final ProcedureItem item;
+  final SopivaStore store;
+  final int index;
+
+  const _ProcedureRow({
+    required this.item,
+    required this.store,
+    required this.index,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = categoryColor(item.category);
+    final usage = store.usageCount(item.id);
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(24),
+      onTap: () => _openProcedureDetail(
+        context,
+        store,
+        item.id,
+      ),
+      child: Ink(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 46,
+              height: 46,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: Text(
+                '${index + 1}'.padLeft(2, '0'),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          item.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      if (item.favorite)
+                        const Icon(
+                          Icons.bookmark_rounded,
+                          size: 18,
+                          color: sopivaCoral,
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    item.description.trim().isEmpty
+                        ? procedureCategoryLabel(item.category)
+                        : item.description,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: sopivaSlate,
+                      fontSize: 12,
+                      height: 1.35,
+                    ),
+                  ),
+                  const SizedBox(height: 11),
+                  Wrap(
+                    spacing: 7,
+                    runSpacing: 7,
+                    children: [
+                      Pill(
+                        text: procedureCategoryLabel(item.category),
+                        color: color,
+                      ),
+                      Pill(
+                        text: '${item.steps.length} STEPS',
+                        color: sopivaIndigo,
+                      ),
+                      Pill(
+                        text: '$usage RUNS',
+                        color: sopivaSlate,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(
+              Icons.arrow_forward_ios_rounded,
+              size: 14,
+              color: sopivaSlate,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -719,8 +950,7 @@ class ProcedureEditorScreen extends StatefulWidget {
       _ProcedureEditorScreenState();
 }
 
-class _ProcedureEditorScreenState
-    extends State<ProcedureEditorScreen> {
+class _ProcedureEditorScreenState extends State<ProcedureEditorScreen> {
   final formKey = GlobalKey<FormState>();
 
   late String title;
@@ -735,11 +965,9 @@ class _ProcedureEditorScreenState
     super.initState();
 
     final item = widget.procedure;
-
     title = item?.title ?? '';
     description = item?.description ?? '';
-    category =
-        item?.category ?? ProcedureCategory.operations;
+    category = item?.category ?? ProcedureCategory.operations;
     favorite = item?.favorite ?? false;
   }
 
@@ -747,62 +975,39 @@ class _ProcedureEditorScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          editing ? 'EDIT PROCEDURE' : 'NEW PROCEDURE',
-        ),
+        title: Text(editing ? 'Edit procedure' : 'New procedure'),
         actions: [
           if (editing)
             IconButton(
               onPressed: _delete,
-              icon: const Icon(
-                Icons.delete_outline_rounded,
-              ),
+              icon: const Icon(Icons.delete_outline_rounded),
             ),
         ],
       ),
       body: Form(
         key: formKey,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 30),
+          padding: const EdgeInsets.fromLTRB(18, 8, 18, 30),
           children: [
+            const SectionTitle(
+              kicker: 'Procedure profile',
+              title: 'Define the workflow',
+            ),
+            const SizedBox(height: 18),
             TextFormField(
               initialValue: title,
               textCapitalization: TextCapitalization.words,
               decoration: const InputDecoration(
                 labelText: 'Procedure name',
-                prefixIcon: Icon(Icons.rule_rounded),
+                hintText: 'e.g. Client onboarding',
               ),
               validator: (value) {
-                if (value == null ||
-                    value.trim().isEmpty) {
+                if (value == null || value.trim().isEmpty) {
                   return 'Enter a procedure name';
                 }
                 return null;
               },
               onChanged: (value) => title = value,
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<ProcedureCategory>(
-              initialValue: category,
-              decoration: const InputDecoration(
-                labelText: 'Category',
-                prefixIcon: Icon(Icons.category_outlined),
-              ),
-              items: [
-                for (final value
-                    in ProcedureCategory.values)
-                  DropdownMenuItem(
-                    value: value,
-                    child: Text(
-                      procedureCategoryLabel(value),
-                    ),
-                  ),
-              ],
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() => category = value);
-                }
-              },
             ),
             const SizedBox(height: 12),
             TextFormField(
@@ -812,43 +1017,83 @@ class _ProcedureEditorScreenState
               decoration: const InputDecoration(
                 labelText: 'Purpose or instructions',
                 alignLabelWithHint: true,
-                prefixIcon: Icon(
-                  Icons.notes_rounded,
-                ),
               ),
               onChanged: (value) => description = value,
             ),
-            const SizedBox(height: 12),
-            Card(
-              elevation: 0,
-              child: SwitchListTile(
-                value: favorite,
-                onChanged: (value) {
-                  setState(() => favorite = value);
-                },
-                secondary: const Icon(
-                  Icons.star_outline_rounded,
-                  color: sopivaAmber,
-                ),
-                title: const Text(
-                  'Favorite procedure',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w800,
+            const SizedBox(height: 22),
+            const Text(
+              'CATEGORY',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.2,
+                color: sopivaSlate,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final value in ProcedureCategory.values)
+                  ChoiceChip(
+                    avatar: Icon(
+                      categoryIcon(value),
+                      size: 17,
+                      color: category == value
+                          ? Colors.white
+                          : categoryColor(value),
+                    ),
+                    label: Text(procedureCategoryLabel(value)),
+                    selected: category == value,
+                    selectedColor: categoryColor(value),
+                    labelStyle: TextStyle(
+                      color: category == value
+                          ? Colors.white
+                          : null,
+                      fontWeight: FontWeight.w800,
+                    ),
+                    onSelected: (_) =>
+                        setState(() => category = value),
                   ),
+              ],
+            ),
+            const SizedBox(height: 22),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 5,
+              ),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: favorite,
+                onChanged: (value) =>
+                    setState(() => favorite = value),
+                title: const Text(
+                  'Pin to favorites',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                subtitle: const Text(
+                  'Keep this procedure easy to find.',
+                ),
+                secondary: const Icon(
+                  Icons.bookmark_outline_rounded,
+                  color: sopivaCoral,
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 26),
             FilledButton.icon(
               onPressed: _save,
               icon: const Icon(Icons.check_rounded),
-              label: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Text(
-                  editing
-                      ? 'SAVE CHANGES'
-                      : 'CREATE PROCEDURE',
-                ),
+              label: Text(
+                editing ? 'SAVE PROCEDURE' : 'CREATE PROCEDURE',
               ),
             ),
           ],
@@ -858,12 +1103,9 @@ class _ProcedureEditorScreenState
   }
 
   Future<void> _save() async {
-    if (!(formKey.currentState?.validate() ?? false)) {
-      return;
-    }
+    if (!(formKey.currentState?.validate() ?? false)) return;
 
     final now = DateTime.now();
-
     final item = ProcedureItem(
       id: widget.procedure?.id ??
           now.microsecondsSinceEpoch.toString(),
@@ -893,17 +1135,15 @@ class _ProcedureEditorScreenState
       builder: (dialogContext) => AlertDialog(
         title: const Text('Delete procedure?'),
         content: Text(
-          'Remove "${item.title}"? Existing completed run history will remain available.',
+          'Remove "${item.title}"? Existing run history will stay available.',
         ),
         actions: [
           TextButton(
-            onPressed: () =>
-                Navigator.pop(dialogContext, false),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('CANCEL'),
           ),
           FilledButton(
-            onPressed: () =>
-                Navigator.pop(dialogContext, true),
+            onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('DELETE'),
           ),
         ],
@@ -937,189 +1177,150 @@ class ProcedureDetailScreen extends StatelessWidget {
 
         if (item == null) {
           return const Scaffold(
-            body: Center(
-              child: Text('Procedure not found'),
-            ),
+            body: Center(child: Text('Procedure not found')),
           );
         }
 
         final color = categoryColor(item.category);
-        final usage = store.usageCount(item.id);
 
         return Scaffold(
           appBar: AppBar(
-            title: const Text('PROCEDURE DETAILS'),
+            title: const Text('Procedure'),
             actions: [
               IconButton(
-                onPressed: () =>
-                    store.toggleFavorite(item.id),
+                onPressed: () => store.toggleFavorite(item.id),
                 icon: Icon(
                   item.favorite
-                      ? Icons.star_rounded
-                      : Icons.star_outline_rounded,
-                  color:
-                      item.favorite ? sopivaAmber : null,
+                      ? Icons.bookmark_rounded
+                      : Icons.bookmark_outline_rounded,
+                  color: item.favorite ? sopivaCoral : null,
                 ),
               ),
               IconButton(
-                onPressed: () => Navigator.push(
+                onPressed: () => _openProcedureEditor(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => ProcedureEditorScreen(
-                      store: store,
-                      procedure: item,
-                    ),
-                  ),
+                  store,
+                  procedure: item,
                 ),
                 icon: const Icon(Icons.edit_outlined),
               ),
             ],
           ),
           body: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 30),
+            padding: const EdgeInsets.fromLTRB(18, 4, 18, 30),
             children: [
-              Card(
-                elevation: 0,
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        crossAxisAlignment:
-                            CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: 58,
-                            height: 58,
-                            decoration: BoxDecoration(
-                              color: color.withOpacity(.09),
-                              borderRadius:
-                                  BorderRadius.circular(18),
-                            ),
-                            child: Icon(
-                              categoryIcon(item.category),
-                              color: color,
-                              size: 30,
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  item.title,
-                                  style: const TextStyle(
-                                    fontSize: 23,
-                                    fontWeight:
-                                        FontWeight.w900,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  procedureCategoryLabel(
-                                    item.category,
-                                  ),
-                                  style: TextStyle(
-                                    color: color,
-                                    fontWeight:
-                                        FontWeight.w800,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+              Container(
+                padding: const EdgeInsets.all(22),
+                decoration: BoxDecoration(
+                  color: sopivaInk,
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      categoryIcon(item.category),
+                      size: 34,
+                      color: color,
+                    ),
+                    const SizedBox(height: 18),
+                    Text(
+                      item.title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 28,
+                        height: 1.05,
+                        fontWeight: FontWeight.w900,
                       ),
-                      if (item.description.trim().isNotEmpty) ...[
-                        const SizedBox(height: 18),
-                        Text(
-                          item.description,
-                          style: TextStyle(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurfaceVariant,
-                            height: 1.5,
-                          ),
+                    ),
+                    if (item.description.trim().isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        item.description,
+                        style: const TextStyle(
+                          color: Colors.white60,
+                          height: 1.45,
                         ),
-                      ],
-                      const SizedBox(height: 18),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          _InfoChip(
-                            text:
-                                '${item.steps.length} steps',
-                            color: sopivaTeal,
-                          ),
-                          _InfoChip(
-                            text:
-                                '$usage ${usage == 1 ? 'run' : 'runs'}',
-                            color: sopivaBlue,
-                          ),
-                          _InfoChip(
-                            text: shortDate(item.createdAt),
-                            color: sopivaAmber,
-                          ),
-                        ],
                       ),
                     ],
-                  ),
+                    const SizedBox(height: 18),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        Pill(
+                          text: procedureCategoryLabel(item.category),
+                          color: color,
+                        ),
+                        Pill(
+                          text: '${item.steps.length} STEPS',
+                          color: sopivaIndigo,
+                        ),
+                        Pill(
+                          text: '${store.usageCount(item.id)} RUNS',
+                          color: sopivaGold,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: sopivaCoral,
+                          foregroundColor: Colors.white,
+                        ),
+                        onPressed: item.steps.isEmpty
+                            ? null
+                            : () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => RunProcedureScreen(
+                                      store: store,
+                                      procedureId: item.id,
+                                    ),
+                                  ),
+                                ),
+                        icon: const Icon(Icons.play_arrow_rounded),
+                        label: Text(
+                          item.steps.isEmpty
+                              ? 'ADD STEPS FIRST'
+                              : 'START RUN',
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 14),
-              SizedBox(
-                height: 52,
-                child: FilledButton.icon(
-                  onPressed: item.steps.isEmpty
-                      ? null
-                      : () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  RunProcedureScreen(
-                                store: store,
-                                procedureId: item.id,
-                              ),
-                            ),
-                          ),
-                  icon: const Icon(
-                    Icons.play_arrow_rounded,
-                  ),
-                  label: Text(
-                    item.steps.isEmpty
-                        ? 'ADD STEPS TO START'
-                        : 'START PROCEDURE',
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              _SectionHeader(
-                title: 'Checklist steps',
-                actionLabel: 'ADD STEP',
-                onTap: () => _showStepEditor(
+              const SizedBox(height: 28),
+              SectionTitle(
+                kicker: 'Procedure map',
+                title: 'Steps',
+                action: 'ADD STEP',
+                onAction: () => _showStepEditor(
                   context,
                   store,
                   item.id,
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 14),
               if (item.steps.isEmpty)
-                const _EmptyCard(
-                  icon: Icons.playlist_add_check_rounded,
-                  title: 'No steps yet',
-                  text:
-                      'Add the steps that should be followed whenever this procedure is run.',
+                _BlankSlate(
+                  icon: Icons.route_outlined,
+                  title: 'Build the route',
+                  message:
+                      'Add each instruction once. SOPIVA will guide the next run step by step.',
+                  action: 'ADD FIRST STEP',
+                  onAction: () => _showStepEditor(
+                    context,
+                    store,
+                    item.id,
+                  ),
                 )
               else
                 ReorderableListView.builder(
                   shrinkWrap: true,
-                  physics:
-                      const NeverScrollableScrollPhysics(),
+                  physics: const NeverScrollableScrollPhysics(),
                   itemCount: item.steps.length,
                   onReorder: (oldIndex, newIndex) {
                     store.reorderSteps(
@@ -1130,77 +1331,23 @@ class ProcedureDetailScreen extends StatelessWidget {
                   },
                   itemBuilder: (context, index) {
                     final step = item.steps[index];
+                    final isLast = index == item.steps.length - 1;
 
-                    return Padding(
+                    return _StepTimelineRow(
                       key: ValueKey(step.id),
-                      padding:
-                          const EdgeInsets.only(bottom: 9),
-                      child: Card(
-                        elevation: 0,
-                        child: ListTile(
-                          leading: Container(
-                            width: 38,
-                            height: 38,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color:
-                                  sopivaTeal.withOpacity(.09),
-                              borderRadius:
-                                  BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              '${index + 1}',
-                              style: const TextStyle(
-                                color: sopivaTeal,
-                                fontWeight:
-                                    FontWeight.w900,
-                              ),
-                            ),
-                          ),
-                          title: Text(
-                            step.title,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                          subtitle: step.note.trim().isEmpty
-                              ? null
-                              : Text(
-                                  step.note,
-                                  maxLines: 2,
-                                  overflow:
-                                      TextOverflow.ellipsis,
-                                ),
-                          trailing:
-                              PopupMenuButton<String>(
-                            onSelected: (value) async {
-                              if (value == 'edit') {
-                                await _showStepEditor(
-                                  context,
-                                  store,
-                                  item.id,
-                                  step: step,
-                                );
-                              } else if (value ==
-                                  'delete') {
-                                await store.deleteStep(
-                                  procedureId: item.id,
-                                  stepId: step.id,
-                                );
-                              }
-                            },
-                            itemBuilder: (_) => const [
-                              PopupMenuItem(
-                                value: 'edit',
-                                child: Text('Edit'),
-                              ),
-                              PopupMenuItem(
-                                value: 'delete',
-                                child: Text('Delete'),
-                              ),
-                            ],
-                          ),
-                        ),
+                      index: index,
+                      step: step,
+                      color: color,
+                      isLast: isLast,
+                      onEdit: () => _showStepEditor(
+                        context,
+                        store,
+                        item.id,
+                        step: step,
+                      ),
+                      onDelete: () => store.deleteStep(
+                        procedureId: item.id,
+                        stepId: step.id,
                       ),
                     );
                   },
@@ -1213,36 +1360,106 @@ class ProcedureDetailScreen extends StatelessWidget {
   }
 }
 
-class _InfoChip extends StatelessWidget {
-  final String text;
+class _StepTimelineRow extends StatelessWidget {
+  final int index;
+  final ProcedureStep step;
   final Color color;
+  final bool isLast;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
-  const _InfoChip({
-    required this.text,
+  const _StepTimelineRow({
+    super.key,
+    required this.index,
+    required this.step,
     required this.color,
+    required this.isLast,
+    required this.onEdit,
+    required this.onDelete,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 11,
-        vertical: 7,
-      ),
-      decoration: BoxDecoration(
-        color: color.withOpacity(.09),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: color.withOpacity(.18),
-        ),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: color,
-          fontSize: 11,
-          fontWeight: FontWeight.w900,
-        ),
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            width: 48,
+            child: Column(
+              children: [
+                NumberBadge(
+                  number: index + 1,
+                  color: color,
+                ),
+                if (!isLast)
+                  Expanded(
+                    child: Container(
+                      width: 2,
+                      margin: const EdgeInsets.symmetric(vertical: 5),
+                      color: color.withOpacity(.18),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Container(
+              margin: EdgeInsets.only(bottom: isLast ? 0 : 12),
+              padding: const EdgeInsets.all(15),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          step.title,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        if (step.note.trim().isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            step.note,
+                            style: const TextStyle(
+                              color: sopivaSlate,
+                              height: 1.35,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  PopupMenuButton<String>(
+                    onSelected: (value) {
+                      if (value == 'edit') onEdit();
+                      if (value == 'delete') onDelete();
+                    },
+                    itemBuilder: (_) => const [
+                      PopupMenuItem(
+                        value: 'edit',
+                        child: Text('Edit step'),
+                      ),
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: Text('Delete step'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1257,62 +1474,69 @@ Future<void> _showStepEditor(
   String title = step?.title ?? '';
   String note = step?.note ?? '';
 
-  final result =
-      await showDialog<Map<String, String>>(
+  final result = await showModalBottomSheet<Map<String, String>>(
     context: context,
-    builder: (dialogContext) => AlertDialog(
-      title: Text(
-        step == null ? 'Add step' : 'Edit step',
-      ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextFormField(
-            initialValue: title,
-            autofocus: true,
-            textCapitalization:
-                TextCapitalization.sentences,
-            decoration: const InputDecoration(
-              labelText: 'Step title',
-            ),
-            onChanged: (value) => title = value,
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            initialValue: note,
-            minLines: 2,
-            maxLines: 4,
-            decoration: const InputDecoration(
-              labelText: 'Instruction or note',
-            ),
-            onChanged: (value) => note = value,
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () =>
-              Navigator.pop(dialogContext),
-          child: const Text('CANCEL'),
-        ),
-        FilledButton(
-          onPressed: () {
-            if (title.trim().isEmpty) return;
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (sheetContext) {
+      final bottom = MediaQuery.of(sheetContext).viewInsets.bottom;
 
-            Navigator.pop(
-              dialogContext,
-              {
-                'title': title.trim(),
-                'note': note.trim(),
-              },
-            );
-          },
-          child: Text(
-            step == null ? 'ADD' : 'SAVE',
-          ),
+      return Padding(
+        padding: EdgeInsets.fromLTRB(18, 4, 18, bottom + 22),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              step == null ? 'Add a step' : 'Edit step',
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              initialValue: title,
+              autofocus: true,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(
+                labelText: 'Step title',
+              ),
+              onChanged: (value) => title = value,
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              initialValue: note,
+              minLines: 3,
+              maxLines: 5,
+              decoration: const InputDecoration(
+                labelText: 'Instruction or note',
+                alignLabelWithHint: true,
+              ),
+              onChanged: (value) => note = value,
+            ),
+            const SizedBox(height: 18),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: () {
+                  if (title.trim().isEmpty) return;
+
+                  Navigator.pop(
+                    sheetContext,
+                    {
+                      'title': title.trim(),
+                      'note': note.trim(),
+                    },
+                  );
+                },
+                child: Text(step == null ? 'ADD STEP' : 'SAVE STEP'),
+              ),
+            ),
+          ],
         ),
-      ],
-    ),
+      );
+    },
   );
 
   if (result == null) return;
@@ -1345,23 +1569,21 @@ class RunProcedureScreen extends StatefulWidget {
   });
 
   @override
-  State<RunProcedureScreen> createState() =>
-      _RunProcedureScreenState();
+  State<RunProcedureScreen> createState() => _RunProcedureScreenState();
 }
 
-class _RunProcedureScreenState
-    extends State<RunProcedureScreen> {
+class _RunProcedureScreenState extends State<RunProcedureScreen> {
   late final DateTime startedAt;
   final Map<String, RunStepStatus> statuses = {};
+
   Timer? timer;
   int elapsedSeconds = 0;
+  int currentIndex = 0;
   bool paused = false;
   bool saving = false;
 
   ProcedureItem? get procedure =>
-      widget.store.procedureById(
-        widget.procedureId,
-      );
+      widget.store.procedureById(widget.procedureId);
 
   @override
   void initState() {
@@ -1395,232 +1617,285 @@ class _RunProcedureScreenState
   }
 
   int get completedCount => statuses.values
-      .where(
-        (e) => e == RunStepStatus.completed,
-      )
+      .where((e) => e == RunStepStatus.completed)
       .length;
 
-  int get skippedCount => statuses.values
-      .where(
-        (e) => e == RunStepStatus.skipped,
-      )
-      .length;
+  int get skippedCount =>
+      statuses.values.where((e) => e == RunStepStatus.skipped).length;
 
-  int get pendingCount => statuses.values
-      .where(
-        (e) => e == RunStepStatus.pending,
-      )
-      .length;
+  int get handledCount => completedCount + skippedCount;
 
   double get progress {
     if (statuses.isEmpty) return 0;
-    return (completedCount + skippedCount) /
-        statuses.length;
+    return handledCount / statuses.length;
   }
 
   @override
   Widget build(BuildContext context) {
     final item = procedure;
 
-    if (item == null) {
+    if (item == null || item.steps.isEmpty) {
       return const Scaffold(
-        body: Center(
-          child: Text('Procedure not found'),
-        ),
+        body: Center(child: Text('Procedure unavailable')),
       );
     }
 
+    currentIndex = currentIndex.clamp(0, item.steps.length - 1).toInt();
+    final step = item.steps[currentIndex];
+    final status = statuses[step.id] ?? RunStepStatus.pending;
+    final color = categoryColor(item.category);
+    final allHandled = handledCount == item.steps.length;
+
     return PopScope(
       canPop: false,
-      onPopInvokedWithResult: (
-        didPop,
-        result,
-      ) async {
+      onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
         await _exitRun();
       },
       child: Scaffold(
-        appBar: AppBar(
-          automaticallyImplyLeading: false,
-          leading: IconButton(
-            onPressed: _exitRun,
-            icon: const Icon(Icons.close_rounded),
-          ),
-          title: const Text('RUN PROCEDURE'),
-          actions: [
-            TextButton.icon(
-              onPressed: () {
-                setState(() {
-                  paused = !paused;
-                });
-              },
-              icon: Icon(
-                paused
-                    ? Icons.play_arrow_rounded
-                    : Icons.pause_rounded,
-              ),
-              label: Text(
-                paused ? 'RESUME' : 'PAUSE',
-              ),
-            ),
-          ],
-        ),
-        body: Column(
-          children: [
-            Container(
-              margin:
-                  const EdgeInsets.fromLTRB(16, 4, 16, 8),
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .outlineVariant,
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          item.title,
-                          style: const TextStyle(
-                            fontSize: 21,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
+        backgroundColor: sopivaInk,
+        body: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                child: Row(
+                  children: [
+                    IconButton(
+                      onPressed: _exitRun,
+                      icon: const Icon(
+                        Icons.close_rounded,
+                        color: Colors.white,
                       ),
-                      Text(
-                        formatDuration(elapsedSeconds),
-                        style: const TextStyle(
-                          color: sopivaTeal,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 13),
-                  ProgressLine(
-                    value: progress,
-                    color: sopivaTeal,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '$completedCount completed • $skippedCount skipped • $pendingCount pending',
-                    style: TextStyle(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurfaceVariant,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
                     ),
-                  ),
-                  if (paused) ...[
-                    const SizedBox(height: 12),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(11),
-                      decoration: BoxDecoration(
-                        color:
-                            sopivaAmber.withOpacity(.10),
-                        borderRadius:
-                            BorderRadius.circular(14),
+                    Expanded(
+                      child: Column(
+                        children: [
+                          Text(
+                            item.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${currentIndex + 1} / ${item.steps.length}',
+                            style: const TextStyle(
+                              color: Colors.white54,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
                       ),
-                      child: const Text(
-                        'Run paused',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: sopivaAmber,
-                          fontWeight: FontWeight.w900,
-                        ),
+                    ),
+                    Text(
+                      formatDuration(elapsedSeconds),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
                   ],
-                ],
-              ),
-            ),
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.fromLTRB(
-                  16,
-                  8,
-                  16,
-                  110,
                 ),
-                itemCount: item.steps.length,
-                itemBuilder: (context, index) {
-                  final step = item.steps[index];
-                  final status =
-                      statuses[step.id] ??
-                          RunStepStatus.pending;
-
-                  return Padding(
-                    padding:
-                        const EdgeInsets.only(bottom: 9),
-                    child: _RunStepTile(
-                      index: index,
-                      step: step,
-                      status: status,
-                      disabled: paused,
-                      onCompleted: () {
-                        if (paused) return;
-                        setState(() {
-                          statuses[step.id] =
-                              status ==
-                                      RunStepStatus
-                                          .completed
-                                  ? RunStepStatus
-                                      .pending
-                                  : RunStepStatus
-                                      .completed;
-                        });
-                      },
-                      onSkipped: () {
-                        if (paused) return;
-                        setState(() {
-                          statuses[step.id] =
-                              status ==
-                                      RunStepStatus
-                                          .skipped
-                                  ? RunStepStatus
-                                      .pending
-                                  : RunStepStatus
-                                      .skipped;
-                        });
-                      },
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 22),
+                child: ProgressTrack(
+                  value: progress,
+                  color: color,
+                  height: 5,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 18),
+                  decoration: const BoxDecoration(
+                    color: sopivaPaper,
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(34),
                     ),
-                  );
-                },
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          NumberBadge(
+                            number: currentIndex + 1,
+                            color: color,
+                            done: status == RunStepStatus.completed,
+                          ),
+                          const Spacer(),
+                          Pill(
+                            text: runStepStatusLabel(status).toUpperCase(),
+                            color: status == RunStepStatus.completed
+                                ? sopivaMint
+                                : status == RunStepStatus.skipped
+                                    ? sopivaGold
+                                    : sopivaSlate,
+                          ),
+                        ],
+                      ),
+                      const Spacer(),
+                      Text(
+                        step.title,
+                        style: const TextStyle(
+                          color: sopivaInk,
+                          fontSize: 32,
+                          height: 1.08,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      if (step.note.trim().isNotEmpty) ...[
+                        const SizedBox(height: 14),
+                        Text(
+                          step.note,
+                          style: const TextStyle(
+                            color: sopivaSlate,
+                            fontSize: 16,
+                            height: 1.5,
+                          ),
+                        ),
+                      ],
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.all(13),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.track_changes_rounded,
+                              color: sopivaIndigo,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                '$completedCount completed • $skippedCount skipped',
+                                style: const TextStyle(
+                                  color: sopivaInk,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: () =>
+                                  setState(() => paused = !paused),
+                              icon: Icon(
+                                paused
+                                    ? Icons.play_arrow_rounded
+                                    : Icons.pause_rounded,
+                                color: sopivaInk,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (paused) ...[
+                        const SizedBox(height: 10),
+                        const Center(
+                          child: Text(
+                            'RUN PAUSED',
+                            style: TextStyle(
+                              color: sopivaCoral,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: paused
+                                  ? null
+                                  : () => _setCurrentStatus(
+                                        RunStepStatus.skipped,
+                                      ),
+                              icon: const Icon(Icons.skip_next_rounded),
+                              label: const Text('SKIP'),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            flex: 2,
+                            child: FilledButton.icon(
+                              onPressed: paused
+                                  ? null
+                                  : () => _setCurrentStatus(
+                                        RunStepStatus.completed,
+                                      ),
+                              icon: const Icon(Icons.check_rounded),
+                              label: Text(
+                                currentIndex == item.steps.length - 1
+                                    ? 'MARK DONE'
+                                    : 'DONE & NEXT',
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          IconButton(
+                            onPressed: currentIndex > 0
+                                ? () => setState(() => currentIndex -= 1)
+                                : null,
+                            icon: const Icon(Icons.arrow_back_rounded),
+                          ),
+                          const Spacer(),
+                          if (allHandled)
+                            FilledButton.tonalIcon(
+                              onPressed: saving ? null : _finishRun,
+                              icon: const Icon(Icons.flag_rounded),
+                              label: const Text('FINISH RUN'),
+                            )
+                          else
+                            TextButton(
+                              onPressed:
+                                  currentIndex < item.steps.length - 1
+                                      ? () => setState(
+                                            () => currentIndex += 1,
+                                          )
+                                      : null,
+                              child: const Text('NEXT STEP'),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
-          ],
-        ),
-        bottomNavigationBar: SafeArea(
-          minimum:
-              const EdgeInsets.fromLTRB(16, 8, 16, 16),
-          child: FilledButton.icon(
-            onPressed:
-                pendingCount == 0 && !saving
-                    ? _finishRun
-                    : null,
-            icon: const Icon(Icons.flag_rounded),
-            label: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Text(
-                pendingCount == 0
-                    ? 'FINISH PROCEDURE'
-                    : 'HANDLE ALL STEPS',
-              ),
-            ),
+            ],
           ),
         ),
       ),
     );
+  }
+
+  void _setCurrentStatus(RunStepStatus value) {
+    final item = procedure;
+    if (item == null || item.steps.isEmpty) return;
+
+    final step = item.steps[currentIndex];
+
+    setState(() {
+      statuses[step.id] = value;
+
+      if (currentIndex < item.steps.length - 1) {
+        currentIndex += 1;
+      }
+    });
   }
 
   Future<void> _finishRun() async {
@@ -1629,48 +1904,63 @@ class _RunProcedureScreenState
 
     String note = '';
 
-    final result = await showDialog<String>(
+    final result = await showModalBottomSheet<String>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Complete run'),
-        content: TextFormField(
-          minLines: 3,
-          maxLines: 5,
-          decoration: const InputDecoration(
-            labelText: 'Run notes (optional)',
-            alignLabelWithHint: true,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        final bottom = MediaQuery.of(sheetContext).viewInsets.bottom;
+
+        return Padding(
+          padding: EdgeInsets.fromLTRB(18, 6, 18, bottom + 22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Close the run',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Add an optional note before saving this execution.',
+                style: TextStyle(color: sopivaSlate),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                minLines: 3,
+                maxLines: 5,
+                decoration: const InputDecoration(
+                  labelText: 'Run note',
+                  alignLabelWithHint: true,
+                ),
+                onChanged: (value) => note = value,
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () =>
+                      Navigator.pop(sheetContext, note.trim()),
+                  child: const Text('SAVE RUN'),
+                ),
+              ),
+            ],
           ),
-          onChanged: (value) => note = value,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () =>
-                Navigator.pop(dialogContext),
-            child: const Text('CANCEL'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(
-              dialogContext,
-              note.trim(),
-            ),
-            child: const Text('SAVE RUN'),
-          ),
-        ],
-      ),
+        );
+      },
     );
 
     if (result == null || !mounted) return;
 
-    setState(() {
-      saving = true;
-    });
-
+    setState(() => saving = true);
     timer?.cancel();
 
     final run = ProcedureRun(
-      id: DateTime.now()
-          .microsecondsSinceEpoch
-          .toString(),
+      id: DateTime.now().microsecondsSinceEpoch.toString(),
       procedureId: item.id,
       procedureTitle: item.title,
       category: item.category,
@@ -1678,14 +1968,16 @@ class _RunProcedureScreenState
       finishedAt: DateTime.now(),
       durationSeconds: elapsedSeconds,
       note: result,
-      steps: item.steps.map((step) {
-        return RunStepResult(
-          stepId: step.id,
-          title: step.title,
-          status: statuses[step.id] ??
-              RunStepStatus.pending,
-        );
-      }).toList(),
+      steps: item.steps
+          .map(
+            (step) => RunStepResult(
+              stepId: step.id,
+              title: step.title,
+              status:
+                  statuses[step.id] ?? RunStepStatus.pending,
+            ),
+          )
+          .toList(),
     );
 
     await widget.store.addRun(run);
@@ -1704,19 +1996,17 @@ class _RunProcedureScreenState
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Exit this run?'),
+        title: const Text('Exit current run?'),
         content: const Text(
-          'Current checklist progress will not be saved.',
+          'Progress from this unfinished run will not be saved.',
         ),
         actions: [
           TextButton(
-            onPressed: () =>
-                Navigator.pop(dialogContext, false),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('KEEP RUNNING'),
           ),
           FilledButton(
-            onPressed: () =>
-                Navigator.pop(dialogContext, true),
+            onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('EXIT'),
           ),
         ],
@@ -1729,152 +2019,6 @@ class _RunProcedureScreenState
   }
 }
 
-class _RunStepTile extends StatelessWidget {
-  final int index;
-  final ProcedureStep step;
-  final RunStepStatus status;
-  final bool disabled;
-  final VoidCallback onCompleted;
-  final VoidCallback onSkipped;
-
-  const _RunStepTile({
-    required this.index,
-    required this.step,
-    required this.status,
-    required this.disabled,
-    required this.onCompleted,
-    required this.onSkipped,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    Color color;
-    IconData icon;
-
-    switch (status) {
-      case RunStepStatus.pending:
-        color = Theme.of(context)
-            .colorScheme
-            .onSurfaceVariant;
-        icon = Icons.radio_button_unchecked_rounded;
-        break;
-      case RunStepStatus.completed:
-        color = sopivaGreen;
-        icon = Icons.check_circle_rounded;
-        break;
-      case RunStepStatus.skipped:
-        color = sopivaAmber;
-        icon = Icons.skip_next_rounded;
-        break;
-    }
-
-    return Card(
-      elevation: 0,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          14,
-          12,
-          10,
-          12,
-        ),
-        child: Row(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 39,
-              height: 39,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: color.withOpacity(.09),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                '${index + 1}',
-                style: TextStyle(
-                  color: color,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    step.title,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w900,
-                      decoration: status ==
-                              RunStepStatus.completed
-                          ? TextDecoration.lineThrough
-                          : null,
-                    ),
-                  ),
-                  if (step.note.trim().isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      step.note,
-                      style: TextStyle(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed:
-                              disabled ? null : onSkipped,
-                          icon: const Icon(
-                            Icons.skip_next_rounded,
-                            size: 18,
-                          ),
-                          label: const Text('SKIP'),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: FilledButton.icon(
-                          onPressed:
-                              disabled ? null : onCompleted,
-                          icon: Icon(
-                            status ==
-                                    RunStepStatus.completed
-                                ? Icons.undo_rounded
-                                : Icons.check_rounded,
-                            size: 18,
-                          ),
-                          label: Text(
-                            status ==
-                                    RunStepStatus.completed
-                                ? 'UNDO'
-                                : 'DONE',
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 4),
-            Icon(
-              icon,
-              color: color,
-              size: 22,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 class RunResultScreen extends StatelessWidget {
   final ProcedureRun run;
@@ -1886,127 +2030,204 @@ class RunResultScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final color = categoryColor(run.category);
+
     return Scaffold(
+      backgroundColor: sopivaInk,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: const Text('RUN COMPLETE'),
+        title: const Text(
+          'Run complete',
+          style: TextStyle(color: Colors.white),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('DONE'),
+            child: const Text(
+              'DONE',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(18),
-        children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: sopivaGreen.withOpacity(.09),
-              borderRadius: BorderRadius.circular(28),
-            ),
-            child: Column(
-              children: [
-                const Icon(
-                  Icons.task_alt_rounded,
-                  size: 64,
-                  color: sopivaGreen,
+      body: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: sopivaPaper,
+                  borderRadius: BorderRadius.circular(32),
                 ),
-                const SizedBox(height: 14),
-                Text(
-                  run.procedureTitle,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  '${(run.completionRate * 100).round()}% completed',
-                  style: const TextStyle(
-                    color: sopivaGreen,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: MetricCard(
-                  value: '${run.completedCount}',
-                  label: 'COMPLETED',
-                  icon: Icons.check_rounded,
-                  color: sopivaGreen,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: MetricCard(
-                  value: '${run.skippedCount}',
-                  label: 'SKIPPED',
-                  icon: Icons.skip_next_rounded,
-                  color: sopivaAmber,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          MetricCard(
-            value: formatDuration(run.durationSeconds),
-            label: 'RUN TIME',
-            icon: Icons.timer_outlined,
-            color: sopivaBlue,
-          ),
-          if (run.note.trim().isNotEmpty) ...[
-            const SizedBox(height: 18),
-            Card(
-              elevation: 0,
-              child: Padding(
-                padding: const EdgeInsets.all(18),
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Run note',
-                      style: TextStyle(
+                    const Spacer(),
+                    Container(
+                      width: 92,
+                      height: 92,
+                      decoration: BoxDecoration(
+                        color: color.withOpacity(.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.done_all_rounded,
+                        size: 48,
+                        color: color,
+                      ),
+                    ),
+                    const SizedBox(height: 22),
+                    Text(
+                      run.procedureTitle,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: sopivaInk,
+                        fontSize: 28,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Text(run.note),
+                    Text(
+                      '${(run.completionRate * 100).round()}% completion',
+                      style: const TextStyle(
+                        color: sopivaSlate,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    ProgressTrack(
+                      value: run.completionRate,
+                      color: color,
+                      height: 9,
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _ResultMetric(
+                            value: '${run.completedCount}',
+                            label: 'Done',
+                            color: sopivaMint,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _ResultMetric(
+                            value: '${run.skippedCount}',
+                            label: 'Skipped',
+                            color: sopivaGold,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _ResultMetric(
+                            value: formatDuration(run.durationSeconds),
+                            label: 'Time',
+                            color: sopivaIndigo,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (run.note.trim().isNotEmpty) ...[
+                      const SizedBox(height: 22),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Text(
+                          run.note,
+                          style: const TextStyle(
+                            color: sopivaInk,
+                            height: 1.45,
+                          ),
+                        ),
+                      ),
+                    ],
+                    const Spacer(),
+                    const Text(
+                      'Execution saved to local history',
+                      style: TextStyle(
+                        color: sopivaSlate,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ],
                 ),
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ResultMetric extends StatelessWidget {
+  final String value;
+  final String label;
+  final Color color;
+
+  const _ResultMetric({
+    required this.value,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      decoration: BoxDecoration(
+        color: color.withOpacity(.10),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        children: [
+          Text(
+            value,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: color,
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            label.toUpperCase(),
+            style: const TextStyle(
+              color: sopivaSlate,
+              fontSize: 9,
+              fontWeight: FontWeight.w900,
+              letterSpacing: .7,
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-
-class RunHistoryScreen extends StatefulWidget {
+class RunHistoryPage extends StatefulWidget {
   final SopivaStore store;
 
-  const RunHistoryScreen({
+  const RunHistoryPage({
     super.key,
     required this.store,
   });
 
   @override
-  State<RunHistoryScreen> createState() =>
-      _RunHistoryScreenState();
+  State<RunHistoryPage> createState() => _RunHistoryPageState();
 }
 
-class _RunHistoryScreenState
-    extends State<RunHistoryScreen> {
+class _RunHistoryPageState extends State<RunHistoryPage> {
   String query = '';
 
   @override
@@ -2018,202 +2239,217 @@ class _RunHistoryScreenState
 
         final runs = widget.store.runs.where((run) {
           return q.isEmpty ||
-              run.procedureTitle
-                  .toLowerCase()
-                  .contains(q) ||
+              run.procedureTitle.toLowerCase().contains(q) ||
+              run.note.toLowerCase().contains(q) ||
               procedureCategoryLabel(run.category)
                   .toLowerCase()
-                  .contains(q) ||
-              run.note.toLowerCase().contains(q);
+                  .contains(q);
         }).toList();
 
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('RUN HISTORY'),
-          ),
-          body: ListView(
-            padding:
-                const EdgeInsets.fromLTRB(16, 4, 16, 30),
-            children: [
-              TextField(
-                onChanged: (value) {
-                  setState(() => query = value);
-                },
+        return Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 10),
+              child: const SectionTitle(
+                kicker: 'Execution archive',
+                title: 'Run history',
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              child: TextField(
+                onChanged: (value) => setState(() => query = value),
                 decoration: const InputDecoration(
-                  hintText: 'Search run history',
+                  hintText: 'Search saved runs',
                   prefixIcon: Icon(Icons.search_rounded),
                 ),
               ),
-              const SizedBox(height: 14),
-              if (runs.isEmpty)
-                const _EmptyCard(
-                  icon: Icons.history_rounded,
-                  title: 'No run history',
-                  text:
-                      'Finished procedure runs will appear here.',
-                )
-              else
-                ...runs.map(
-                  (run) => Padding(
-                    padding:
-                        const EdgeInsets.only(bottom: 10),
-                    child: _RunHistoryCard(
-                      run: run,
-                      store: widget.store,
+            ),
+            const SizedBox(height: 10),
+            Expanded(
+              child: runs.isEmpty
+                  ? const Padding(
+                      padding: EdgeInsets.all(18),
+                      child: _BlankSlate(
+                        icon: Icons.history_toggle_off_rounded,
+                        title: 'No run history',
+                        message:
+                            'Finished procedure runs will build a timeline here.',
+                      ),
+                    )
+                  : ListView.builder(
+                      padding:
+                          const EdgeInsets.fromLTRB(18, 8, 18, 110),
+                      itemCount: runs.length,
+                      itemBuilder: (context, index) {
+                        return _HistoryTimelineItem(
+                          run: runs[index],
+                          store: widget.store,
+                          isLast: index == runs.length - 1,
+                        );
+                      },
                     ),
-                  ),
-                ),
-            ],
-          ),
+            ),
+          ],
         );
       },
     );
   }
 }
 
-class _RunHistoryCard extends StatelessWidget {
+class _HistoryTimelineItem extends StatelessWidget {
   final ProcedureRun run;
   final SopivaStore store;
+  final bool isLast;
 
-  const _RunHistoryCard({
+  const _HistoryTimelineItem({
     required this.run,
     required this.store,
+    required this.isLast,
   });
 
   @override
   Widget build(BuildContext context) {
     final color = categoryColor(run.category);
 
-    return Card(
-      elevation: 0,
-      child: ExpansionTile(
-        shape: const RoundedRectangleBorder(),
-        collapsedShape:
-            const RoundedRectangleBorder(),
-        leading: Container(
-          width: 46,
-          height: 46,
-          decoration: BoxDecoration(
-            color: color.withOpacity(.09),
-            borderRadius: BorderRadius.circular(15),
-          ),
-          child: Icon(
-            categoryIcon(run.category),
-            color: color,
-          ),
-        ),
-        title: Text(
-          run.procedureTitle,
-          style: const TextStyle(
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        subtitle: Text(
-          '${shortDate(run.finishedAt)} • ${formatDuration(run.durationSeconds)}',
-        ),
-        trailing: Text(
-          '${(run.completionRate * 100).round()}%',
-          style: TextStyle(
-            color: run.skippedCount == 0
-                ? sopivaGreen
-                : sopivaAmber,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        childrenPadding:
-            const EdgeInsets.fromLTRB(16, 0, 16, 16),
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: _MiniStat(
-                  label: 'Completed',
-                  value: '${run.completedCount}',
-                  color: sopivaGreen,
+          SizedBox(
+            width: 34,
+            child: Column(
+              children: [
+                Container(
+                  width: 14,
+                  height: 14,
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Theme.of(context).scaffoldBackgroundColor,
+                      width: 3,
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _MiniStat(
-                  label: 'Skipped',
-                  value: '${run.skippedCount}',
-                  color: sopivaAmber,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _MiniStat(
-                  label: 'Total',
-                  value: '${run.totalCount}',
-                  color: sopivaBlue,
-                ),
-              ),
-            ],
+                if (!isLast)
+                  Expanded(
+                    child: Container(
+                      width: 2,
+                      color: color.withOpacity(.18),
+                    ),
+                  ),
+              ],
+            ),
           ),
-          if (run.note.trim().isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                run.note,
-                style: TextStyle(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurfaceVariant,
+          const SizedBox(width: 8),
+          Expanded(
+            child: Container(
+              margin: EdgeInsets.only(bottom: isLast ? 0 : 12),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(22),
+              ),
+              child: ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                childrenPadding: EdgeInsets.zero,
+                shape: const RoundedRectangleBorder(),
+                collapsedShape: const RoundedRectangleBorder(),
+                title: Text(
+                  run.procedureTitle,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
-              ),
-            ),
-          ],
-          const SizedBox(height: 12),
-          for (final step in run.steps)
-            ListTile(
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(
-                step.status ==
-                        RunStepStatus.completed
-                    ? Icons.check_circle_rounded
-                    : step.status ==
-                            RunStepStatus.skipped
-                        ? Icons.skip_next_rounded
-                        : Icons
-                            .radio_button_unchecked_rounded,
-                color: step.status ==
-                        RunStepStatus.completed
-                    ? sopivaGreen
-                    : step.status ==
-                            RunStepStatus.skipped
-                        ? sopivaAmber
-                        : null,
-              ),
-              title: Text(step.title),
-              trailing: Text(
-                runStepStatusLabel(step.status),
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  color: step.status ==
-                          RunStepStatus.completed
-                      ? sopivaGreen
-                      : step.status ==
-                              RunStepStatus.skipped
-                          ? sopivaAmber
-                          : null,
+                subtitle: Text(
+                  '${shortDate(run.finishedAt)} • ${formatDuration(run.durationSeconds)}',
+                  style: const TextStyle(
+                    color: sopivaSlate,
+                    fontSize: 11,
+                  ),
                 ),
+                trailing: Pill(
+                  text: '${(run.completionRate * 100).round()}%',
+                  color: run.skippedCount == 0
+                      ? sopivaMint
+                      : sopivaGold,
+                ),
+                children: [
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _MiniHistoryStat(
+                          label: 'Done',
+                          value: '${run.completedCount}',
+                          color: sopivaMint,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _MiniHistoryStat(
+                          label: 'Skipped',
+                          value: '${run.skippedCount}',
+                          color: sopivaGold,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _MiniHistoryStat(
+                          label: 'Steps',
+                          value: '${run.totalCount}',
+                          color: sopivaIndigo,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (run.note.trim().isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        run.note,
+                        style: const TextStyle(
+                          color: sopivaSlate,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 10),
+                  for (final step in run.steps)
+                    ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(
+                        step.status == RunStepStatus.completed
+                            ? Icons.check_circle_rounded
+                            : step.status == RunStepStatus.skipped
+                                ? Icons.skip_next_rounded
+                                : Icons.circle_outlined,
+                        color: step.status == RunStepStatus.completed
+                            ? sopivaMint
+                            : step.status == RunStepStatus.skipped
+                                ? sopivaGold
+                                : sopivaSlate,
+                      ),
+                      title: Text(step.title),
+                    ),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      onPressed: () => _deleteRun(
+                        context,
+                        store,
+                        run,
+                      ),
+                      icon: const Icon(Icons.delete_outline_rounded),
+                      label: const Text('DELETE RUN'),
+                    ),
+                  ),
+                ],
               ),
-            ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton.icon(
-              onPressed: () => _deleteRun(
-                context,
-                store,
-                run,
-              ),
-              icon: const Icon(
-                Icons.delete_outline_rounded,
-              ),
-              label: const Text('DELETE RUN'),
             ),
           ),
         ],
@@ -2222,12 +2458,12 @@ class _RunHistoryCard extends StatelessWidget {
   }
 }
 
-class _MiniStat extends StatelessWidget {
+class _MiniHistoryStat extends StatelessWidget {
   final String label;
   final String value;
   final Color color;
 
-  const _MiniStat({
+  const _MiniHistoryStat({
     required this.label,
     required this.value,
     required this.color,
@@ -2236,7 +2472,7 @@ class _MiniStat extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(11),
+      padding: const EdgeInsets.symmetric(vertical: 11),
       decoration: BoxDecoration(
         color: color.withOpacity(.08),
         borderRadius: BorderRadius.circular(14),
@@ -2252,10 +2488,11 @@ class _MiniStat extends StatelessWidget {
             ),
           ),
           Text(
-            label,
+            label.toUpperCase(),
             style: const TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w800,
+              color: sopivaSlate,
+              fontSize: 9,
+              fontWeight: FontWeight.w900,
             ),
           ),
         ],
@@ -2274,17 +2511,15 @@ Future<void> _deleteRun(
     builder: (dialogContext) => AlertDialog(
       title: const Text('Delete run?'),
       content: Text(
-        'Remove this "${run.procedureTitle}" run from history?',
+        'Remove this "${run.procedureTitle}" execution from local history?',
       ),
       actions: [
         TextButton(
-          onPressed: () =>
-              Navigator.pop(dialogContext, false),
+          onPressed: () => Navigator.pop(dialogContext, false),
           child: const Text('CANCEL'),
         ),
         FilledButton(
-          onPressed: () =>
-              Navigator.pop(dialogContext, true),
+          onPressed: () => Navigator.pop(dialogContext, true),
           child: const Text('DELETE'),
         ),
       ],
@@ -2296,10 +2531,10 @@ Future<void> _deleteRun(
   }
 }
 
-class StatisticsScreen extends StatelessWidget {
+class InsightsPage extends StatelessWidget {
   final SopivaStore store;
 
-  const StatisticsScreen({
+  const InsightsPage({
     super.key,
     required this.store,
   });
@@ -2309,17 +2544,6 @@ class StatisticsScreen extends StatelessWidget {
     return AnimatedBuilder(
       animation: store,
       builder: (context, _) {
-        final categoryCounts =
-            <ProcedureCategory, int>{
-          for (final category
-              in ProcedureCategory.values)
-            category: store.procedures
-                .where(
-                  (e) => e.category == category,
-                )
-                .length,
-        };
-
         final mostUsed = [...store.procedures]
           ..sort(
             (a, b) => store
@@ -2327,202 +2551,264 @@ class StatisticsScreen extends StatelessWidget {
                 .compareTo(store.usageCount(a.id)),
           );
 
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('STATISTICS'),
-          ),
-          body: ListView(
-            padding:
-                const EdgeInsets.fromLTRB(16, 4, 16, 30),
-            children: [
-              const Text(
-                'Process performance',
-                style: TextStyle(
-                  fontSize: 29,
-                  fontWeight: FontWeight.w900,
-                ),
+        final categoryCounts = <ProcedureCategory, int>{
+          for (final category in ProcedureCategory.values)
+            category: store.procedures
+                .where((e) => e.category == category)
+                .length,
+        };
+
+        final maxUsage = mostUsed.isEmpty
+            ? 1
+            : mostUsed
+                .map((e) => store.usageCount(e.id))
+                .fold<int>(1, (a, b) => a > b ? a : b);
+
+        final maxCategory = categoryCounts.values.isEmpty
+            ? 1
+            : categoryCounts.values
+                .fold<int>(1, (a, b) => a > b ? a : b);
+
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 110),
+          children: [
+            const SectionTitle(
+              kicker: 'Local analytics',
+              title: 'Insights',
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Calculated from your saved procedures and completed runs.',
+              style: TextStyle(
+                color: sopivaSlate,
+                height: 1.4,
               ),
-              const SizedBox(height: 6),
-              Text(
-                'A local overview calculated from your procedure runs.',
-                style: TextStyle(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurfaceVariant,
-                ),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: sopivaInk,
+                borderRadius: BorderRadius.circular(28),
               ),
-              const SizedBox(height: 20),
-              Row(
+              child: Column(
                 children: [
-                  Expanded(
-                    child: MetricCard(
-                      value:
-                          '${store.procedures.length}',
-                      label: 'PROCEDURES',
-                      icon: Icons.rule_rounded,
-                      color: sopivaTeal,
-                    ),
+                  _DarkInsightRow(
+                    label: 'Average completion',
+                    value:
+                        '${(store.averageCompletionRate * 100).round()}%',
+                    icon: Icons.task_alt_rounded,
+                    color: sopivaMint,
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: MetricCard(
-                      value: '${store.totalRuns}',
-                      label: 'TOTAL RUNS',
-                      icon: Icons
-                          .play_circle_outline_rounded,
-                      color: sopivaBlue,
-                    ),
+                  const Divider(color: Colors.white12, height: 26),
+                  _DarkInsightRow(
+                    label: 'Average run time',
+                    value:
+                        formatDuration(store.averageDurationSeconds),
+                    icon: Icons.timer_outlined,
+                    color: sopivaGold,
+                  ),
+                  const Divider(color: Colors.white12, height: 26),
+                  _DarkInsightRow(
+                    label: 'Handled steps',
+                    value:
+                        '${store.totalCompletedSteps + store.totalSkippedSteps}',
+                    icon: Icons.checklist_rounded,
+                    color: sopivaCoral,
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: MetricCard(
-                      value:
-                          '${(store.averageCompletionRate * 100).round()}%',
-                      label: 'AVG COMPLETE',
-                      icon: Icons.task_alt_rounded,
-                      color: sopivaGreen,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: MetricCard(
-                      value: formatDuration(
-                        store.averageDurationSeconds,
-                      ),
-                      label: 'AVG RUN TIME',
-                      icon: Icons.timer_outlined,
-                      color: sopivaAmber,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: MetricCard(
-                      value:
-                          '${store.totalCompletedSteps}',
-                      label: 'STEPS DONE',
-                      icon: Icons.check_rounded,
-                      color: sopivaGreen,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: MetricCard(
-                      value:
-                          '${store.totalSkippedSteps}',
-                      label: 'STEPS SKIPPED',
-                      icon: Icons.skip_next_rounded,
-                      color: sopivaRed,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              const _SectionHeader(
-                title: 'Most used procedures',
-              ),
-              const SizedBox(height: 10),
-              if (mostUsed.isEmpty ||
-                  store.totalRuns == 0)
-                const _EmptyCard(
-                  icon: Icons.insights_outlined,
-                  title: 'No usage data yet',
-                  text:
-                      'Run procedures to build useful performance statistics.',
-                )
-              else
-                Card(
-                  elevation: 0,
-                  child: Padding(
-                    padding: const EdgeInsets.all(10),
-                    child: Column(
-                      children: [
-                        for (final item
-                            in mostUsed.where(
-                          (e) =>
-                              store.usageCount(e.id) > 0,
-                        ).take(5))
-                          ListTile(
-                            leading: Icon(
-                              categoryIcon(
-                                item.category,
-                              ),
-                              color: categoryColor(
-                                item.category,
-                              ),
-                            ),
-                            title: Text(item.title),
-                            trailing: Text(
-                              '${store.usageCount(item.id)} runs',
-                              style: const TextStyle(
-                                fontWeight:
-                                    FontWeight.w900,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
+            ),
+            const SizedBox(height: 28),
+            const SectionTitle(
+              kicker: 'Usage',
+              title: 'Most used procedures',
+            ),
+            const SizedBox(height: 14),
+            if (store.totalRuns == 0)
+              const _BlankSlate(
+                icon: Icons.insights_outlined,
+                title: 'No usage data yet',
+                message:
+                    'Complete a few procedure runs to build performance insights.',
+              )
+            else
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(24),
                 ),
-              const SizedBox(height: 22),
-              const _SectionHeader(
-                title: 'Procedures by category',
-              ),
-              const SizedBox(height: 10),
-              Card(
-                elevation: 0,
-                child: Padding(
-                  padding: const EdgeInsets.all(10),
-                  child: Column(
-                    children: [
-                      for (final entry
-                          in categoryCounts.entries)
-                        if (entry.value > 0)
-                          ListTile(
-                            leading: Icon(
-                              categoryIcon(entry.key),
-                              color:
-                                  categoryColor(entry.key),
-                            ),
-                            title: Text(
-                              procedureCategoryLabel(
-                                entry.key,
-                              ),
-                            ),
-                            trailing: Text(
-                              '${entry.value}',
-                              style: const TextStyle(
-                                fontWeight:
-                                    FontWeight.w900,
-                              ),
-                            ),
-                          ),
-                      if (categoryCounts.values
-                          .every((e) => e == 0))
-                        const Padding(
-                          padding: EdgeInsets.all(18),
-                          child: Text(
-                            'Add procedures to see category statistics.',
-                          ),
+                child: Column(
+                  children: [
+                    for (final item in mostUsed
+                        .where((e) => store.usageCount(e.id) > 0)
+                        .take(6))
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: _BarInsight(
+                          label: item.title,
+                          value: store.usageCount(item.id),
+                          max: maxUsage,
+                          color: categoryColor(item.category),
+                          suffix: 'runs',
                         ),
-                    ],
-                  ),
+                      ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            const SizedBox(height: 28),
+            const SectionTitle(
+              kicker: 'Library',
+              title: 'Category mix',
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Column(
+                children: [
+                  for (final entry in categoryCounts.entries)
+                    if (entry.value > 0)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: _BarInsight(
+                          label: procedureCategoryLabel(entry.key),
+                          value: entry.value,
+                          max: maxCategory,
+                          color: categoryColor(entry.key),
+                          suffix: entry.value == 1
+                              ? 'procedure'
+                              : 'procedures',
+                        ),
+                      ),
+                  if (categoryCounts.values.every((e) => e == 0))
+                    const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: Text(
+                        'Create procedures to see the category mix.',
+                        style: TextStyle(color: sopivaSlate),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
         );
       },
     );
   }
 }
+
+class _DarkInsightRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color color;
+
+  const _DarkInsightRow({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 42,
+          height: 42,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: color.withOpacity(.12),
+            borderRadius: BorderRadius.circular(13),
+          ),
+          child: Icon(icon, color: color),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white60,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _BarInsight extends StatelessWidget {
+  final String label;
+  final int value;
+  final int max;
+  final Color color;
+  final String suffix;
+
+  const _BarInsight({
+    required this.label,
+    required this.value,
+    required this.max,
+    required this.color,
+    required this.suffix,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final ratio = max <= 0 ? 0.0 : value / max;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              '$value $suffix',
+              style: TextStyle(
+                color: color,
+                fontSize: 11,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ProgressTrack(
+          value: ratio,
+          color: color,
+          height: 8,
+        ),
+      ],
+    );
+  }
+}
+
 
 class SettingsScreen extends StatelessWidget {
   final SopivaStore store;
@@ -2539,46 +2825,64 @@ class SettingsScreen extends StatelessWidget {
       builder: (context, _) {
         return Scaffold(
           appBar: AppBar(
-            title: const Text('SETTINGS'),
+            title: const Text('Settings'),
           ),
           body: ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(18, 8, 18, 30),
             children: [
-              Card(
-                elevation: 0,
+              const SectionTitle(
+                kicker: 'Workspace',
+                title: 'Preferences',
+              ),
+              const SizedBox(height: 16),
+              Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(22),
+                ),
                 child: SwitchListTile(
                   value: store.darkMode,
                   onChanged: store.setDarkMode,
-                  secondary: const Icon(
-                    Icons.dark_mode_outlined,
-                  ),
+                  secondary: const Icon(Icons.dark_mode_outlined),
                   title: const Text(
                     'Dark mode',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                  subtitle: const Text(
+                    'Use a darker workspace appearance.',
                   ),
                 ),
               ),
+              const SizedBox(height: 24),
+              const SectionTitle(
+                kicker: 'Information',
+                title: 'Legal',
+              ),
               const SizedBox(height: 12),
-              Card(
-                elevation: 0,
+              Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(22),
+                ),
                 child: Column(
                   children: [
                     ListTile(
-                      leading: const Icon(
-                        Icons.privacy_tip_outlined,
+                      leading:
+                          const Icon(Icons.privacy_tip_outlined),
+                      title: const Text(
+                        'Privacy Policy',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
-                      title:
-                          const Text('Privacy Policy'),
                       trailing: const Icon(
-                        Icons.chevron_right_rounded,
+                        Icons.arrow_forward_ios_rounded,
+                        size: 14,
                       ),
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) =>
-                              const LegalScreen(
+                          builder: (_) => const LegalScreen(
                             title: 'Privacy Policy',
                             body: privacyText,
                           ),
@@ -2587,22 +2891,23 @@ class SettingsScreen extends StatelessWidget {
                     ),
                     const Divider(height: 1),
                     ListTile(
-                      leading: const Icon(
-                        Icons.description_outlined,
-                      ),
+                      leading:
+                          const Icon(Icons.description_outlined),
                       title: const Text(
                         'Terms & Conditions',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                       trailing: const Icon(
-                        Icons.chevron_right_rounded,
+                        Icons.arrow_forward_ios_rounded,
+                        size: 14,
                       ),
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) =>
-                              const LegalScreen(
-                            title:
-                                'Terms & Conditions',
+                          builder: (_) => const LegalScreen(
+                            title: 'Terms & Conditions',
                             body: termsText,
                           ),
                         ),
@@ -2611,22 +2916,44 @@ class SettingsScreen extends StatelessWidget {
                   ],
                 ),
               ),
+              const SizedBox(height: 24),
+              const SectionTitle(
+                kicker: 'Data',
+                title: 'Local storage',
+              ),
               const SizedBox(height: 12),
-              Card(
-                elevation: 0,
-                child: ListTile(
-                  textColor: sopivaRed,
-                  iconColor: sopivaRed,
-                  leading: const Icon(
-                    Icons.delete_sweep_outlined,
-                  ),
-                  title:
-                      const Text('Reset all data'),
-                  subtitle: const Text(
-                    'Delete procedures and run history stored by SOPIVA.',
-                  ),
-                  onTap: () =>
-                      _resetAll(context, store),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: sopivaCoral.withOpacity(.08),
+                  borderRadius: BorderRadius.circular(22),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Reset everything',
+                      style: TextStyle(
+                        color: sopivaCoral,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Delete all procedures, steps, execution history, and calculated statistics from this device.',
+                      style: TextStyle(
+                        color: sopivaSlate,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    OutlinedButton.icon(
+                      onPressed: () => _resetAll(context, store),
+                      icon: const Icon(Icons.delete_sweep_outlined),
+                      label: const Text('RESET LOCAL DATA'),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -2634,37 +2961,6 @@ class SettingsScreen extends StatelessWidget {
         );
       },
     );
-  }
-}
-
-Future<void> _resetAll(
-  BuildContext context,
-  SopivaStore store,
-) async {
-  final confirmed = await showDialog<bool>(
-    context: context,
-    builder: (dialogContext) => AlertDialog(
-      title: const Text('Reset SOPIVA?'),
-      content: const Text(
-        'All procedures, checklist steps, run history, and statistics will be removed from local app storage.',
-      ),
-      actions: [
-        TextButton(
-          onPressed: () =>
-              Navigator.pop(dialogContext, false),
-          child: const Text('CANCEL'),
-        ),
-        FilledButton(
-          onPressed: () =>
-              Navigator.pop(dialogContext, true),
-          child: const Text('RESET'),
-        ),
-      ],
-    ),
-  );
-
-  if (confirmed == true) {
-    await store.resetAll();
   }
 }
 
@@ -2693,6 +2989,67 @@ class LegalScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+Future<void> _resetAll(
+  BuildContext context,
+  SopivaStore store,
+) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Reset SOPIVA?'),
+      content: const Text(
+        'All procedures, checklist steps, run history, and local statistics will be removed from this device.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext, false),
+          child: const Text('CANCEL'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(dialogContext, true),
+          child: const Text('RESET'),
+        ),
+      ],
+    ),
+  );
+
+  if (confirmed == true) {
+    await store.resetAll();
+  }
+}
+
+void _openProcedureEditor(
+  BuildContext context,
+  SopivaStore store, {
+  ProcedureItem? procedure,
+}) {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => ProcedureEditorScreen(
+        store: store,
+        procedure: procedure,
+      ),
+    ),
+  );
+}
+
+void _openProcedureDetail(
+  BuildContext context,
+  SopivaStore store,
+  String id,
+) {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => ProcedureDetailScreen(
+        store: store,
+        procedureId: id,
+      ),
+    ),
+  );
 }
 
 const privacyText = '''SOPIVA PRIVACY POLICY

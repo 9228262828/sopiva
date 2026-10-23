@@ -1,17 +1,42 @@
-# sopiva
+# SOPIVA GitHub Pages
 
-A new Flutter project.
+App: SOPIVA — Procedure Checklist Manager  
+Package: `com.sopiva.procedures`  
+Support email: `gamezeta826@gmail.com`
 
-## Getting Started
+## Publish with GitHub Pages
 
-This project is a starting point for a Flutter application.
+1. Create a GitHub repository.
+2. Upload everything from this ZIP.
+3. Keep the `docs` folder exactly as provided.
+4. Open **Settings → Pages**.
+5. Under **Build and deployment**, choose **Deploy from a branch**.
+6. Select the main branch and `/docs`.
+7. Save and wait for GitHub Pages to publish.
 
-A few resources to get you started if this is your first Flutter project:
+Your Privacy Policy URL will normally be:
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+`https://YOUR-GITHUB-USERNAME.github.io/YOUR-REPOSITORY/privacy.html`
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Included:
+- `docs/index.html`
+- `docs/privacy.html`
+- `docs/terms.html`
+- `docs/style.css`
+- `docs/.nojekyll`
+
+The Privacy Policy matches the current offline-first SOPIVA build.
+
+Update the policy before release if a future version adds:
+- Firebase
+- accounts/login
+- cloud sync
+- analytics or crash reporting
+- advertising
+- in-app purchases
+- team collaboration
+- file uploads
+- workplace integrations
+- notifications requiring new permissions
+- camera/document scanning
+- new permissions or new data collection

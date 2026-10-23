@@ -9,57 +9,52 @@ dependencies:
     sdk: flutter
   shared_preferences: ^2.3.2
 
-Included features:
-- Splash Screen
-- Professional Office Dashboard
-- My Procedures
+REDESIGNED UI:
+- Completely new workspace structure
+- Bottom navigation: Overview / Procedures / History / Insights
+- Dark command-center hero instead of the previous dashboard card layout
+- Horizontal quick-launch procedure tiles
+- Numbered procedure library rows
+- Category filter pills
+- Timeline-style procedure steps
+- Bottom-sheet step editor
+- Full-screen step-by-step Run Mode
+- One active step at a time instead of the previous checklist list
+- Dedicated run-complete summary
+- Timeline-style execution history
+- Bar-style local insights
+- New settings layout and visual system
+- New typography hierarchy, spacing, shapes, and icon treatment
+
+FUNCTIONALITY KEPT:
 - Add / Edit / Delete Procedure
-- Procedure Categories
+- Categories
 - Favorites
-- Search + Category Filters
-- Procedure Details
-- Add / Edit / Delete Checklist Steps
-- Reorder Checklist Steps
-- Start Procedure Run
-- Complete / Undo Steps
-- Skip / Unskip Steps
-- Pause / Resume Run
-- Live Run Progress
-- Live Run Timer
+- Search / Filters
+- Add / Edit / Delete Steps
+- Reorder Steps
+- Start Run
+- Complete / Skip Steps
+- Pause / Resume
+- Run Timer
 - Run Notes
-- Finished Run Summary
 - Run History
-- Per-Run Completed / Skipped Step Details
-- Delete Run History Entry
-- Total Procedures
-- Total Runs
-- Average Completion Rate
-- Average Run Time
-- Total Completed Steps
-- Total Skipped Steps
-- Most Used Procedures
-- Procedures by Category
+- Completion statistics
+- Average run time
+- Most-used procedures
+- Category statistics
 - Dark Mode
-- Privacy Policy
-- Terms & Conditions
-- Reset All Data
-- SharedPreferences JSON persistence
+- Privacy / Terms
+- Reset local data
+- SharedPreferences persistence
 
-Architecture:
-- Material 3
-- ChangeNotifier + AnimatedBuilder
-- SharedPreferences
-- Offline-first
+No Firebase
+No backend
+No login
+No ads
+No analytics
+No cloud sync
+No sensitive permissions
 
-Not included:
-- Firebase
-- Backend
-- Login / Accounts
-- Ads
-- Analytics
-- Cloud Sync
-- Sensitive permissions
-- Required image/audio assets
-
-Release package name:
+Release package:
 com.sopiva.procedures

@@ -2,37 +2,83 @@ import 'package:flutter/material.dart';
 
 import 'models.dart';
 
-const sopivaNavy = Color(0xFF152238);
-const sopivaTeal = Color(0xFF1F9D8B);
-const sopivaAmber = Color(0xFFF4B942);
-const sopivaBlue = Color(0xFF4A78D0);
-const sopivaRed = Color(0xFFE46464);
-const sopivaGreen = Color(0xFF3EA66B);
-const sopivaBg = Color(0xFFF5F7FA);
+const sopivaInk = Color(0xFF161A22);
+const sopivaPaper = Color(0xFFF3F1EC);
+const sopivaPanel = Color(0xFFE9E6DF);
+const sopivaIndigo = Color(0xFF4F5DFF);
+const sopivaCoral = Color(0xFFFF6B57);
+const sopivaMint = Color(0xFF3CBF9B);
+const sopivaGold = Color(0xFFE8B34F);
+const sopivaSlate = Color(0xFF707786);
+const sopivaDarkPanel = Color(0xFF202630);
 
 ThemeData sopivaTheme(Brightness brightness) {
   final dark = brightness == Brightness.dark;
 
+  final scheme = ColorScheme.fromSeed(
+    seedColor: sopivaIndigo,
+    brightness: brightness,
+    primary: sopivaIndigo,
+    secondary: sopivaCoral,
+    surface: dark ? sopivaDarkPanel : Colors.white,
+  );
+
   return ThemeData(
     useMaterial3: true,
     brightness: brightness,
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: sopivaTeal,
-      brightness: brightness,
-      primary: sopivaTeal,
-      secondary: sopivaAmber,
-    ),
-    scaffoldBackgroundColor:
-        dark ? const Color(0xFF0E1725) : sopivaBg,
+    colorScheme: scheme,
+    scaffoldBackgroundColor: dark ? const Color(0xFF11151C) : sopivaPaper,
+    fontFamily: null,
     appBarTheme: const AppBarTheme(
       backgroundColor: Colors.transparent,
       surfaceTintColor: Colors.transparent,
+      elevation: 0,
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
+      fillColor: dark ? const Color(0xFF1C222C) : Colors.white,
+      hintStyle: TextStyle(
+        color: dark ? Colors.white54 : sopivaSlate,
+      ),
+      labelStyle: TextStyle(
+        color: dark ? Colors.white70 : sopivaSlate,
+      ),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide.none,
+        borderRadius: BorderRadius.circular(18),
+        borderSide: BorderSide(
+          color: dark ? Colors.white12 : const Color(0xFFD7D3CA),
+        ),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(18),
+        borderSide: BorderSide(
+          color: dark ? Colors.white12 : const Color(0xFFD7D3CA),
+        ),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(18),
+        borderSide: const BorderSide(
+          color: sopivaIndigo,
+          width: 1.5,
+        ),
+      ),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        backgroundColor: sopivaInk,
+        foregroundColor: Colors.white,
+        minimumSize: const Size(0, 52),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(0, 50),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
       ),
     ),
   );
@@ -41,38 +87,38 @@ ThemeData sopivaTheme(Brightness brightness) {
 IconData categoryIcon(ProcedureCategory category) {
   switch (category) {
     case ProcedureCategory.operations:
-      return Icons.settings_suggest_outlined;
+      return Icons.precision_manufacturing_outlined;
     case ProcedureCategory.admin:
-      return Icons.badge_outlined;
+      return Icons.inventory_2_outlined;
     case ProcedureCategory.client:
-      return Icons.handshake_outlined;
+      return Icons.groups_2_outlined;
     case ProcedureCategory.quality:
-      return Icons.verified_outlined;
+      return Icons.fact_check_outlined;
     case ProcedureCategory.finance:
       return Icons.account_balance_wallet_outlined;
     case ProcedureCategory.safety:
-      return Icons.health_and_safety_outlined;
+      return Icons.shield_outlined;
     case ProcedureCategory.other:
-      return Icons.checklist_rounded;
+      return Icons.widgets_outlined;
   }
 }
 
 Color categoryColor(ProcedureCategory category) {
   switch (category) {
     case ProcedureCategory.operations:
-      return sopivaBlue;
+      return sopivaIndigo;
     case ProcedureCategory.admin:
-      return sopivaTeal;
+      return const Color(0xFF6D70C7);
     case ProcedureCategory.client:
-      return sopivaAmber;
+      return sopivaCoral;
     case ProcedureCategory.quality:
-      return sopivaGreen;
+      return sopivaMint;
     case ProcedureCategory.finance:
-      return const Color(0xFF8B6CD6);
+      return sopivaGold;
     case ProcedureCategory.safety:
-      return sopivaRed;
+      return const Color(0xFFCF4D64);
     case ProcedureCategory.other:
-      return const Color(0xFF6E7C91);
+      return sopivaSlate;
   }
 }
 
@@ -96,55 +142,68 @@ String shortDate(DateTime value) {
     'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
   ];
-
   return '${months[value.month - 1]} ${value.day}, ${value.year}';
 }
 
-class SopivaLogo extends StatelessWidget {
+class SopivaMark extends StatelessWidget {
   final double size;
+  final bool compact;
 
-  const SopivaLogo({
+  const SopivaMark({
     super.key,
-    this.size = 72,
+    this.size = 56,
+    this.compact = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final radius = size * .28;
+
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [sopivaNavy, sopivaTeal],
-        ),
-        borderRadius: BorderRadius.circular(size * .27),
+        color: sopivaInk,
+        borderRadius: BorderRadius.circular(radius),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(.10),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Stack(
         alignment: Alignment.center,
         children: [
-          Icon(
-            Icons.rule_rounded,
-            size: size * .52,
-            color: Colors.white,
-          ),
           Positioned(
-            right: size * .09,
-            bottom: size * .09,
+            left: size * .18,
+            top: size * .18,
             child: Container(
-              width: size * .25,
-              height: size * .25,
+              width: size * .22,
+              height: size * .22,
               decoration: const BoxDecoration(
-                color: sopivaAmber,
+                color: sopivaCoral,
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                Icons.play_arrow_rounded,
-                size: size * .16,
-                color: sopivaNavy,
+            ),
+          ),
+          Positioned(
+            right: size * .14,
+            bottom: size * .17,
+            child: Container(
+              width: size * .34,
+              height: size * .34,
+              decoration: BoxDecoration(
+                color: sopivaIndigo,
+                borderRadius: BorderRadius.circular(size * .11),
               ),
             ),
+          ),
+          Icon(
+            Icons.alt_route_rounded,
+            size: compact ? size * .40 : size * .46,
+            color: Colors.white,
           ),
         ],
       ),
@@ -152,13 +211,67 @@ class SopivaLogo extends StatelessWidget {
   }
 }
 
-class MetricCard extends StatelessWidget {
+class SectionTitle extends StatelessWidget {
+  final String kicker;
+  final String title;
+  final String? action;
+  final VoidCallback? onAction;
+
+  const SectionTitle({
+    super.key,
+    required this.kicker,
+    required this.title,
+    this.action,
+    this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                kicker.toUpperCase(),
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.4,
+                  color: sopivaCoral,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 24,
+                  height: 1,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (action != null)
+          TextButton(
+            onPressed: onAction,
+            child: Text(action!),
+          ),
+      ],
+    );
+  }
+}
+
+class MetricStrip extends StatelessWidget {
   final String value;
   final String label;
   final IconData icon;
   final Color color;
 
-  const MetricCard({
+  const MetricStrip({
     super.key,
     required this.value,
     required this.label,
@@ -168,35 +281,52 @@ class MetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       decoration: BoxDecoration(
-        color: color.withOpacity(.08),
-        borderRadius: BorderRadius.circular(20),
+        color: dark ? sopivaDarkPanel : Colors.white,
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: color.withOpacity(.16),
+          color: dark ? Colors.white10 : const Color(0xFFDEDBD3),
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Icon(icon, color: color),
-          const SizedBox(height: 12),
-          Text(
-            value,
-            style: TextStyle(
-              color: color,
-              fontSize: 23,
-              fontWeight: FontWeight.w900,
+          Container(
+            width: 38,
+            height: 38,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: color.withOpacity(.10),
+              borderRadius: BorderRadius.circular(12),
             ),
+            child: Icon(icon, color: color, size: 21),
           ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w900,
-              letterSpacing: .5,
+          const SizedBox(width: 11),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 19,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  label.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: .8,
+                    color: dark ? Colors.white54 : sopivaSlate,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -205,25 +335,101 @@ class MetricCard extends StatelessWidget {
   }
 }
 
-class ProgressLine extends StatelessWidget {
-  final double value;
+class Pill extends StatelessWidget {
+  final String text;
   final Color color;
+  final IconData? icon;
 
-  const ProgressLine({
+  const Pill({
     super.key,
-    required this.value,
+    required this.text,
     required this.color,
+    this.icon,
   });
 
   @override
   Widget build(BuildContext context) {
-    final safe = value.clamp(0.0, 1.0).toDouble();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: color.withOpacity(.09),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 14, color: color),
+            const SizedBox(width: 5),
+          ],
+          Text(
+            text,
+            style: TextStyle(
+              color: color,
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
+class NumberBadge extends StatelessWidget {
+  final int number;
+  final Color color;
+  final bool done;
+
+  const NumberBadge({
+    super.key,
+    required this.number,
+    required this.color,
+    this.done = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 34,
+      height: 34,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: done ? color : color.withOpacity(.10),
+        borderRadius: BorderRadius.circular(11),
+      ),
+      child: done
+          ? const Icon(Icons.check_rounded, color: Colors.white, size: 18)
+          : Text(
+              '$number',
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+    );
+  }
+}
+
+class ProgressTrack extends StatelessWidget {
+  final double value;
+  final Color color;
+  final double height;
+
+  const ProgressTrack({
+    super.key,
+    required this.value,
+    required this.color,
+    this.height = 7,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(999),
       child: LinearProgressIndicator(
-        value: safe,
-        minHeight: 8,
+        value: value.clamp(0.0, 1.0).toDouble(),
+        minHeight: height,
         color: color,
         backgroundColor: color.withOpacity(.10),
       ),
